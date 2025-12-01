@@ -15,13 +15,13 @@ type Logger interface {
 }
 
 type LoggerConfig struct {
-	logDirectoryPath string
-	logName          string
+	LogDirectoryPath string
+	LogName          string
 }
 
 type FileLogger struct {
-	file   *os.File
-	writer *bufio.Writer
+	File   *os.File
+	Writer *bufio.Writer
 }
 
 func (fl *FileLogger) CreateLog(body string) error {
@@ -29,11 +29,11 @@ func (fl *FileLogger) CreateLog(body string) error {
 
 	formattedLog := fmt.Sprintf("[%s]\n%s\n", currDateTime.Format(time.RFC3339), body)
 
-	if _, err := fl.writer.WriteString(formattedLog); err != nil {
+	if _, err := fl.Writer.WriteString(formattedLog); err != nil {
 		return err
 	}
 
-	if err := fl.writer.Flush(); err != nil {
+	if err := fl.Writer.Flush(); err != nil {
 		return err
 	}
 
@@ -41,25 +41,25 @@ func (fl *FileLogger) CreateLog(body string) error {
 }
 
 func CreateLogger(config LoggerConfig) (*FileLogger, error) {
-	if config.logDirectoryPath == "" {
+	if config.LogDirectoryPath == "" {
 		return nil, &MissingLogDirectoryPathError{}
 	}
 
-	_, err := os.Stat(config.logDirectoryPath)
+	_, err := os.Stat(config.LogDirectoryPath)
 
 	if errors.Is(err, os.ErrNotExist) {
-		err := os.MkdirAll(config.logDirectoryPath, 0770)
-		log.Printf("Path %s does not existing, creating directory\n", config.logDirectoryPath)
+		err := os.MkdirAll(config.LogDirectoryPath, 0770)
+		log.Printf("Path %s does not existing, creating directory\n", config.LogDirectoryPath)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if config.logName == "" {
+	if config.LogName == "" {
 		return nil, &MissingLogNameError{}
 	}
 
-	logPath := path.Join(config.logDirectoryPath, config.logName)
+	logPath := path.Join(config.LogDirectoryPath, config.LogName)
 
 	file, err := os.OpenFile(logPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
@@ -68,7 +68,7 @@ func CreateLogger(config LoggerConfig) (*FileLogger, error) {
 
 	writer := bufio.NewWriter(file)
 
-	logger := &FileLogger{file: file, writer: writer}
+	logger := &FileLogger{File: file, Writer: writer}
 
 	return logger, nil
 }
