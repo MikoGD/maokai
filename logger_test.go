@@ -11,6 +11,13 @@ import (
 	"time"
 )
 
+func CleanUpTest(t *testing.T, logFilePath string) {
+	err := os.Remove(logFilePath)
+	if err != nil {
+		t.Fatalf("Test clean up failed: %s\n", err)
+	}
+}
+
 func TestCreatingInvalidLoggerConfig(t *testing.T) {
 	cwd, err := os.Getwd()
 
@@ -27,7 +34,7 @@ func TestCreatingInvalidLoggerConfig(t *testing.T) {
 			"Invalid config - missing path to log directory",
 			LoggerConfig{
 				"",
-				"test-logs.log",
+				"invalid-path-to-log-test-logs.log",
 			},
 			&MissingLogDirectoryPathError{},
 		},
@@ -51,13 +58,6 @@ func TestCreatingInvalidLoggerConfig(t *testing.T) {
 	}
 }
 
-func CleanUpTest(t *testing.T, logFilePath string) {
-	err := os.Remove(logFilePath)
-	if err != nil {
-		t.Fatalf("Test clean up failed: %s\n", err)
-	}
-}
-
 func TestWritingLogs(t *testing.T) {
 	cwd, err := os.Getwd()
 
@@ -67,7 +67,7 @@ func TestWritingLogs(t *testing.T) {
 
 	loggerConfig := LoggerConfig{
 		cwd,
-		"test-log.log",
+		"writing-test-log.log",
 	}
 
 	logger, err := CreateLogger(loggerConfig)
@@ -78,38 +78,44 @@ func TestWritingLogs(t *testing.T) {
 
 	logger.CreateLog("test log")
 
-	logFile, err := os.ReadFile(path.Join(cwd, "test-log.log"))
+	logFile, err := os.ReadFile(
+		path.Join(cwd, loggerConfig.LogName))
+
 	if err != nil {
+		CleanUpTest(t, path.Join(cwd, loggerConfig.LogName))
 		t.Fatalf("Error with test, failed to open log file: %s", err)
 	}
 
 	logContent := string(logFile)
 
-	regex := `(?s)^\[(.*?)\]\s*(.*)$`
+	regex := `^\[(.*?)\]\s*(.*)\n$`
 	re := regexp.MustCompile(regex)
 
 	matches := re.FindStringSubmatch(logContent)
 	if len(matches) != 3 {
 		t.Errorf("Expected 3 matches but found %d\nMatches: %v\nLog:\n%s\n", len(matches), matches, logContent)
-		CleanUpTest(t, path.Join(cwd, "test-log.log"))
+		CleanUpTest(t, path.Join(cwd, loggerConfig.LogDirectoryPath))
 		t.FailNow()
 	}
 
 	logTime, err := time.Parse(time.RFC3339, matches[1])
 	if err != nil {
 		t.Errorf("Expected timestamp to be a valid UTC\nReceived: %s\n", logTime)
-		CleanUpTest(t, path.Join(cwd, "test-log.log"))
+		CleanUpTest(t, path.Join(cwd, loggerConfig.LogName))
 		t.FailNow()
 	}
 
 	if logTime.Location() != time.UTC {
 		t.Errorf("Expected timestamp to be a valid UTC\nReceived: %s\n", logTime)
+		CleanUpTest(t, path.Join(cwd, loggerConfig.LogName))
 		t.FailNow()
 	}
 
 	if strings.Trim(matches[2], "\t\r\n") != "test log" {
 		t.Errorf("Expected log to \"test log\"\nReceived: \"%s\"\n", matches[2])
-		CleanUpTest(t, path.Join(cwd, "test-log.log"))
+		CleanUpTest(t, path.Join(cwd, loggerConfig.LogName))
 		t.FailNow()
 	}
+
+	CleanUpTest(t, path.Join(cwd, loggerConfig.LogName))
 }

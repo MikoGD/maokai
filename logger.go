@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"strings"
 	"time"
 )
 
@@ -27,7 +28,29 @@ type FileLogger struct {
 func (fl *FileLogger) CreateLog(body string) error {
 	currDateTime := time.Now().UTC()
 
-	formattedLog := fmt.Sprintf("[%s]\n%s\n", currDateTime.Format(time.RFC3339), body)
+	trimmedBody := strings.Trim(body, "\t\n\r ")
+
+	formattedLog := fmt.Sprintf("[%s] %s\n", currDateTime.Format(time.RFC3339), trimmedBody)
+
+	if _, err := fl.Writer.WriteString(formattedLog); err != nil {
+		return err
+	}
+
+	if err := fl.Writer.Flush(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (fl *FileLogger) CreateLogf(format string, a ...any) error {
+	currDateTime := time.Now().UTC()
+
+	trimmedFormat := strings.Trim(format, "\t\n\r ")
+
+	arguments := append([]any{currDateTime.Format(time.RFC3339), trimmedFormat}, a...)
+
+	formattedLog := fmt.Sprintf("[%s] %s\n", arguments...)
 
 	if _, err := fl.Writer.WriteString(formattedLog); err != nil {
 		return err
