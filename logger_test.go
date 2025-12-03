@@ -52,9 +52,6 @@ func TestCreatingInvalidLoggerConfig(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			_, err := CreateLogger(test.Config)
 			if !errors.Is(err, test.ExpectedError) {
-				if test.Config.LogDirectoryPath != "" {
-					CleanUpTest(t, test.Config.LogDirectoryPath)
-				}
 				t.Errorf("\nExpected err: \"%s\"Received err: \"%s\"\n", test.ExpectedError, err)
 			}
 		})
@@ -85,7 +82,7 @@ func TestWritingLogs(t *testing.T) {
 		path.Join(cwd, loggerConfig.LogName))
 
 	if err != nil {
-		CleanUpTest(t, path.Join(cwd, loggerConfig.LogDirectoryPath))
+		CleanUpTest(t, path.Join(cwd, loggerConfig.LogName))
 		t.Fatalf("Error with test, failed to open log file: %s", err)
 	}
 
@@ -104,7 +101,7 @@ func TestWritingLogs(t *testing.T) {
 	logTime, err := time.Parse(time.RFC3339, matches[1])
 	if err != nil {
 		t.Errorf("Expected timestamp to be a valid UTC\nReceived: %s\n", logTime)
-		CleanUpTest(t, path.Join(cwd, loggerConfig.LogDirectoryPath))
+		CleanUpTest(t, path.Join(cwd, loggerConfig.LogName))
 		t.FailNow()
 	}
 
