@@ -11,8 +11,20 @@ import (
 	"time"
 )
 
+type Mode string
+
+const (
+	Production  Mode = "PRODUCTION"
+	Development Mode = "DEVELOPMENT"
+)
+
 type Logger interface {
 	CreateLog(body string) error
+	CreateLogf(format string, a ...any) error
+	CreateDebugLog(body string) error
+	CreateDebugLogf(format string, a ...any) error
+	CreateErrorLog(body string) error
+	CreateErrorLogf(format string, a ...any) error
 }
 
 type LoggerConfig struct {
@@ -23,9 +35,10 @@ type LoggerConfig struct {
 type FileLogger struct {
 	File   *os.File
 	Writer *bufio.Writer
+	Mode   Mode
 }
 
-func (fl *FileLogger) CreateLog(body string) error {
+func (fl *FileLogger) writeLog(body string) error {
 	currDateTime := time.Now().UTC()
 
 	trimmedBody := strings.Trim(body, "\t\n\r ")
@@ -43,7 +56,7 @@ func (fl *FileLogger) CreateLog(body string) error {
 	return nil
 }
 
-func (fl *FileLogger) CreateLogf(format string, a ...any) error {
+func (fl *FileLogger) writeLogf(format string, a ...any) error {
 	currDateTime := time.Now().UTC()
 
 	trimmedFormat := strings.Trim(format, "\t\n\r ")
@@ -57,6 +70,62 @@ func (fl *FileLogger) CreateLogf(format string, a ...any) error {
 	}
 
 	if err := fl.Writer.Flush(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (fl *FileLogger) CreateLog(body string) error {
+	if err := fl.writeLog("[INFO]" + " " + body); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (fl *FileLogger) CreateLogf(format string, a ...any) error {
+	if err := fl.writeLogf("[INFO]" + " " + format, a); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (fl *FileLogger) CreateDebugLog(body string) error {
+	if fl.Mode == Production {
+		return nil
+	}
+
+	if err := fl.writeLog("[DEBUG]" + " " + body); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (fl *FileLogger) CreateDebugLogf(format string, a ...any) error {
+	if fl.Mode == Production {
+		return nil
+	}
+
+	if err := fl.writeLogf("[DEBUG]" + " " + format, a); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (fl *FileLogger) CreateErrorLog(body string) error {
+	if err := fl.writeLog("[ERROR]" + " " + body); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (fl *FileLogger) CreateErrorLogf(format string, a ...any) error {
+	if err := fl.writeLogf("[ERROR]" + " " + format, a); err != nil {
 		return err
 	}
 
@@ -91,7 +160,15 @@ func CreateLogger(config LoggerConfig) (*FileLogger, error) {
 
 	writer := bufio.NewWriter(file)
 
-	logger := &FileLogger{File: file, Writer: writer}
+	var mode Mode
+
+	if os.Getenv("MODE") == string(Production) {
+		mode = Production
+	} else {
+		mode = Development
+	}
+
+	logger := &FileLogger{File: file, Writer: writer, Mode: mode}
 
 	return logger, nil
 }
