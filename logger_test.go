@@ -66,9 +66,9 @@ func TestWritingLogs(t *testing.T) {
 	}
 
 	tests := []struct {
-		Name string
-		LogName string
-		LogBody string 
+		Name        string
+		LogName     string
+		LogBody     string
 		ExpectedLog string
 	}{
 		{
@@ -92,7 +92,7 @@ func TestWritingLogs(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.Name, func(t * testing.T) {
+		t.Run(test.Name, func(t *testing.T) {
 			loggerConfig := LoggerConfig{
 				cwd,
 				test.LogName,
@@ -180,4 +180,67 @@ func TestWritingLogs(t *testing.T) {
 			CleanUpTest(t, path.Join(cwd, loggerConfig.LogName))
 		})
 	}
+}
+
+func TestWritingDebugLogs(t *testing.T) {
+	cwd, err := os.Getwd()
+
+	if err != nil {
+		t.Fatalf("Error with setup, failed to get cwd: %s\n", err)
+	}
+	
+	loggerConfig := LoggerConfig{
+		cwd,
+		"debug-mode-test.log",
+	}
+
+	if err := os.Setenv("MODE", "DEVELOPMENT"); err != nil {
+		t.Fatalf("Error with setup, failed to set env: %s\n", err)
+	}
+
+	logger, err := CreateLogger(loggerConfig)
+	if err != nil {
+		t.Fatalf("Error with test, failed to create logger: %s\n", err)
+	}
+
+	defer func() {
+		os.Unsetenv("MODE")
+	}()
+
+	logger.CreateDebugLog("test debug mode log")
+
+	logFile, err := os.ReadFile(path.Join(cwd, loggerConfig.LogName))
+	if err != nil {
+		t.Fatalf("Error with test, failed to read log: %s\n", err)
+	}
+
+	if string(logFile) == "" {
+		CleanUpTest(t, path.Join(cwd, loggerConfig.LogName))
+		t.Fatalf("Expected log file to be empty be received %s", string(logFile))
+	}
+
+	CleanUpTest(t, path.Join(cwd, loggerConfig.LogName))
+
+	if err := os.Setenv("MODE", "PRODUCTION"); err != nil {
+		t.Fatalf("Error with test, failed to set env: %s\n", err)
+	}
+
+	logger, err = CreateLogger(loggerConfig)
+	if err != nil {
+		t.Fatalf("Error with test, failed to create logger: %s\n", err)
+	}
+
+	logger.CreateDebugLog("test debug mode log")
+
+	logFile, err = os.ReadFile(path.Join(cwd, loggerConfig.LogName))
+	if err != nil {
+		t.Fatalf("Error with test, failed to read log: %s\n", err)
+	}
+
+	if string(logFile) != "" {
+		CleanUpTest(t, path.Join(cwd, loggerConfig.LogName))
+		t.Fatalf("Expected log file to be empty be received %s", string(logFile))
+	}
+
+	CleanUpTest(t, path.Join(cwd, loggerConfig.LogName))
 }
