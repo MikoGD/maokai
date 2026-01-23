@@ -8,6 +8,7 @@ import (
 	"os"
 	"path"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -36,9 +37,14 @@ type FileLogger struct {
 	File   *os.File
 	Writer *bufio.Writer
 	Mode   Mode
+	mutex  sync.Mutex
 }
 
 func (fl *FileLogger) writeLog(body string) error {
+	fl.mutex.Lock()
+
+	defer fl.mutex.Unlock()
+
 	currDateTime := time.Now().UTC()
 
 	trimmedBody := strings.Trim(body, "\t\n\r ")
@@ -57,6 +63,10 @@ func (fl *FileLogger) writeLog(body string) error {
 }
 
 func (fl *FileLogger) writeLogf(format string, a ...any) error {
+	fl.mutex.Lock()
+
+	defer fl.mutex.Unlock()
+
 	currDateTime := time.Now().UTC()
 
 	trimmedFormat := strings.Trim(format, "\t\n\r ")
@@ -109,7 +119,7 @@ func (fl *FileLogger) CreateDebugLogf(format string, a ...any) error {
 		return nil
 	}
 
-	if err := fl.writeLogf("[DEBUG]" + " " + format, a); err != nil {
+	if err := fl.writeLogf("[DEBUG]"+" "+format, a); err != nil {
 		return err
 	}
 
@@ -125,7 +135,7 @@ func (fl *FileLogger) CreateErrorLog(body string) error {
 }
 
 func (fl *FileLogger) CreateErrorLogf(format string, a ...any) error {
-	if err := fl.writeLogf("[ERROR]" + " " + format, a); err != nil {
+	if err := fl.writeLogf("[ERROR]"+" "+format, a); err != nil {
 		return err
 	}
 
